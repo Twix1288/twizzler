@@ -1,0 +1,12 @@
+[package]
+name = "server"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+twizzler = { path = "../../lib/twizzler" }
+twizzler-abi = { path = "../../lib/twizzler-abi" }
+twizzler-rt-abi = { path = "../../abi/rt-abi" }
+heapless = "0.8"
+tiny_http = { path = "../test-tiny-http/src/tiny-http-twizzler" }
+tracing = "0.1"

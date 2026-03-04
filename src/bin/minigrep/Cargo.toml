@@ -1,0 +1,13 @@
+[package]
+name = "minigrep"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Standard memory constraint crate
+heapless = "0.7"
+
+# Local paths to the Twizzler OS crates in your workspace
+twizzler = { path = "../../lib/twizzler" }
+twizzler-abi = { path = "../../lib/twizzler-abi" }
+twizzler-rt-abi = { path = "../../abi/rt-abi" }

@@ -8,3 +8,5 @@ src/data
 toolchain/src/rust/library/twizzler-abis
 Makefile
 .direnv/
+.DS_Store
+**/.DS_Store
