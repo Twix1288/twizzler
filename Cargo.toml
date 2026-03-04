@@ -43,6 +43,9 @@ members = [
     "src/srv/display-srv",
     "src/lib/twizzler-display",
     "src/lib/twizzler-display/display-core",
+    "src/bin/hell",
+    "src/bin/minigrep",
+    "src/bin/server",
 
     "src/ports/lwext4-rs",
     #"src/ports/rusqlite",
@@ -61,14 +64,12 @@ members = [
     #"src/bin/ls",
     #"src/lib/devmgr",
     #"src/bin/serialecho", "tools/serialtest",
-  "src/bin/ptest",
-  #"src/bin/sqlite_test",
     "src/bin/ptest",
+    #"src/bin/sqlite_test",
     #"src/bin/persistent-hashmap-test",
     "src/bin/debug",
     "src/bin/trace",
     "src/bin/schedtest",  
-    "src/bin/sec",
     "src/bin/gfxtest",
 
 ]
@@ -100,6 +101,9 @@ initrd = [
     "crate:cache",
     "crate:trace",
     "crate:gfxtest",
+    "crate:hell",
+    "crate:minigrep",
+    "crate:server",
 
     "crate:sec",
     "crate:ptest",
