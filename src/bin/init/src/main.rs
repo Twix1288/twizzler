@@ -184,6 +184,34 @@ fn initialize_display() {
     std::mem::forget(comp);
 }
 
+/// Split a command line into arguments, respecting double quotes.
+/// e.g. `rg "fn main" /` => ["rg", "fn main", "/"]
+fn shell_split(line: &str) -> Vec<String> {
+    let mut args = Vec::new();
+    let mut current = String::new();
+    let mut in_quotes = false;
+
+    for ch in line.chars() {
+        match ch {
+            '"' => {
+                in_quotes = !in_quotes;
+            }
+            c if c.is_whitespace() && !in_quotes => {
+                if !current.is_empty() {
+                    args.push(std::mem::take(&mut current));
+                }
+            }
+            c => {
+                current.push(c);
+            }
+        }
+    }
+    if !current.is_empty() {
+        args.push(current);
+    }
+    args
+}
+
 fn main() {
     tracing::subscriber::set_global_default(
         tracing_subscriber::fmt()
@@ -279,35 +307,40 @@ fn main() {
         //let mstats = monitor_api::stats().unwrap();
         //println!("{:?}", mstats);
         let line = editor.readline("twz> ", &mut io).unwrap();
-        let cmd = line.split_whitespace().collect::<Vec<_>>();
-        if cmd.len() == 0 {
+        let cmd = shell_split(line);
+        if cmd.is_empty() {
             continue;
         }
 
-        let background = cmd.iter().any(|s| *s == "&");
+        let background = cmd.iter().any(|s| s == "&");
 
         // Find env vars
-        let cmd = cmd.into_iter().map(|s| as_env(s)).collect::<Vec<_>>();
-        let vars = cmd
+        let cmd: Vec<Result<(String, String), String>> = cmd.into_iter().map(|s| as_env(s)).collect();
+        let vars: Vec<(&str, &str)> = cmd
             .iter()
             .filter_map(|r| match r {
-                Ok((k, v)) => Some((k, v)),
+                Ok((k, v)) => Some((k.as_str(), v.as_str())),
                 Err(_) => None,
             })
-            .collect::<Vec<_>>();
-        let cmd = cmd
+            .collect();
+        let cmd: Vec<&str> = cmd
             .iter()
             .filter_map(|r| match r {
                 Ok(_) => None,
-                Err(s) => Some(s),
+                Err(s) => Some(s.as_str()),
             })
-            .collect::<Vec<_>>();
+            .collect();
+
+        if cmd.is_empty() {
+            continue;
+        }
 
         tracing::debug!("got env: {:?}, cmd: {:?}", vars, cmd);
 
+        let env_iter = vars.into_iter().map(|(k, v)| format!("{}={}", k, v)).chain(std::iter::once("PWD=/".to_string()));
         let comp = CompartmentLoader::new(cmd[0], cmd[0], NewCompartmentFlags::empty())
             .args(&cmd)
-            .env(vars.into_iter().map(|(k, v)| format!("{}={}", k, v)))
+            .env(env_iter)
             .load();
         if let Ok(comp) = comp {
             if background {
@@ -324,9 +357,12 @@ fn main() {
     }
 }
 
-fn as_env<'a>(s: &'a str) -> Result<(&'a str, &'a str), &'a str> {
-    let mut split = s.split("=");
-    Ok((split.next().ok_or(s)?, split.next().ok_or(s)?))
+fn as_env(s: String) -> Result<(String, String), String> {
+    if let Some((k, v)) = s.split_once('=') {
+        Ok((k.to_string(), v.to_string()))
+    } else {
+        Err(s)
+    }
 }
 
 /*

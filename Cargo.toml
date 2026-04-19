@@ -71,7 +71,7 @@ members = [
     "src/bin/trace",
     "src/bin/schedtest",  
     "src/bin/gfxtest",
-
+    "src/ports/ripgrep",
 ]
 
 exclude = [
@@ -104,6 +104,7 @@ initrd = [
     "crate:hell",
     "crate:minigrep",
     "crate:server",
+    "crate:ripgrep",
 
     "crate:sec",
     "crate:ptest",

@@ -338,7 +338,7 @@ pub fn set_cc(target: &Triple) -> anyhow::Result<()> {
     let clang_path = {
         let mut clang_path = toolchain_path.clone();
         clang_path.push("bin/clang");
-        clang_path.canonicalize().unwrap()
+        clang_path.canonicalize().unwrap_or(clang_path)
     };
 
     // When compiling crates that compile C code (e.g. alloca), we need to use our clang.
