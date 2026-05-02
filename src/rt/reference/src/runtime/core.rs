@@ -65,19 +65,29 @@ impl ReferenceRuntime {
     }
 
     pub fn cgetenv(&self, name: &CStr) -> *const c_char {
-        // TODO: this approach is very simple, but it leaks if the environment changes a lot.
+        // Cache keyed by variable NAME. Each entry owns a CString whose pointer
+        // we hand out. Entries are updated when the underlying value changes.
+        // POSIX allows getenv's return pointer to be invalidated by setenv/unsetenv,
+        // so replacing the CString in-place is correct.
         static ENVMAP: Mutex<BTreeMap<String, CString>> = Mutex::new(BTreeMap::new());
-        let Ok(name) = name.to_str() else {
+        let Ok(name_str) = name.to_str() else {
             return core::ptr::null();
         };
-        let Ok(val) = std::env::var(name) else {
+        let Ok(val) = std::env::var(name_str) else {
+            // Variable doesn't exist — remove stale cache entry if present
+            let mut envmap = ENVMAP.lock().unwrap();
+            envmap.remove(name_str);
             return core::ptr::null();
         };
         let mut envmap = ENVMAP.lock().unwrap();
-        envmap
-            .entry(val.to_string())
-            .or_insert_with(|| CString::new(val.to_string()).unwrap())
-            .as_ptr()
+        let entry = envmap
+            .entry(name_str.to_string())
+            .or_insert_with(|| CString::new(val.clone()).unwrap());
+        // If the value changed since last cache hit, replace the CString
+        if entry.to_str().ok() != Some(&val) {
+            *entry = CString::new(val).unwrap();
+        }
+        entry.as_ptr()
     }
 
     pub fn runtime_entry(

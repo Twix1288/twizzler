@@ -799,6 +799,52 @@ pub unsafe extern "C-unwind" fn getenv(name: *const core::ffi::c_char) -> *const
     OUR_RUNTIME.cgetenv(n)
 }
 
+#[linkage = "weak"]
+#[no_mangle]
+pub unsafe extern "C-unwind" fn setenv(
+    name: *const core::ffi::c_char,
+    value: *const core::ffi::c_char,
+    overwrite: core::ffi::c_int,
+) -> core::ffi::c_int {
+    if name.is_null() || value.is_null() {
+        return -1;
+    }
+    let n = unsafe { CStr::from_ptr(name.cast()) };
+    let v = unsafe { CStr::from_ptr(value.cast()) };
+    let (Ok(n_str), Ok(v_str)) = (n.to_str(), v.to_str()) else {
+        return -1;
+    };
+    if overwrite == 0 && std::env::var(n_str).is_ok() {
+        return 0;
+    }
+    // SAFETY: On Twizzler, env mutations happen from the init shell before
+    // program worker threads spawn. std::env::set_var is deprecated as unsound
+    // in multi-threaded programs (Rust 1.81+), but Twizzler's single-process
+    // compartment model means only one code path mutates the environment.
+    // The Mutex in cgetenv synchronizes the pointer cache.
+    #[allow(deprecated)]
+    std::env::set_var(n_str, v_str);
+    0
+}
+
+#[linkage = "weak"]
+#[no_mangle]
+pub unsafe extern "C-unwind" fn unsetenv(
+    name: *const core::ffi::c_char,
+) -> core::ffi::c_int {
+    if name.is_null() {
+        return -1;
+    }
+    let n = unsafe { CStr::from_ptr(name.cast()) };
+    let Ok(n_str) = n.to_str() else {
+        return -1;
+    };
+    // SAFETY: Same rationale as setenv above.
+    #[allow(deprecated)]
+    std::env::remove_var(n_str);
+    0
+}
+
 #[no_mangle]
 pub unsafe extern "C-unwind" fn dl_iterate_phdr(
     cb: ::core::option::Option<
